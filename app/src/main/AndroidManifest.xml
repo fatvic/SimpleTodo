@@ -21,8 +21,8 @@
         </activity>
 
         <activity
-            android:name=".SingleListItem"
-            android:label="Single Item Selected"/>
+            android:name=".Child"
+            android:label="Child Selected"/>
 
         <meta-data
             android:name="com.google.android.gms.version"
