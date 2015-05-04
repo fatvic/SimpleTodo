@@ -1,8 +1,10 @@
 package com.example.victor.simpletodo;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.app.DialogFragment;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -12,9 +14,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ExpandableListView;
-import android.widget.Spinner;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import java.io.File;
@@ -29,15 +32,32 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 
-public class MainActivity extends Activity implements AdapterView.OnItemSelectedListener {
+public class MainActivity extends Activity {
 
     private ExpandableListAdapter itemsAdapter;
     private ExpandableListView elvItems;
     private ArrayList<Parent> listTasks;
-    Spinner spinCategories;
-    private ArrayAdapter<String> spinAdapter;
-    private String selCat;
-    private ArrayList<String> categories;// = {"Course", "Travail", "Shopping", "Banque", "Nouvelle catégorie"};
+
+    private Button buttonCats;
+    private Button buttonAddCat;
+    static final int CUSTOM_DIALOG_ID = 0;
+
+    private Dialog dialog;
+
+    ListView lvCats;
+    ArrayAdapter<String> catsAdapter;
+    String[] cats = {
+            "January", "February", "March", "April",
+            "May", "June", "July", "August", "September",
+            "October", "November", "December"};
+
+    ArrayList<String> categories = new ArrayList<>(Arrays.asList(cats));
+
+
+    //Spinner spinCategories;
+    //private ArrayAdapter<String> spinAdapter;
+    private String catText = "";
+    //private ArrayList<String> categories;// = {"Course", "Travail", "Shopping", "Banque", "Nouvelle catégorie"};
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -50,11 +70,13 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
 
         setupItemsAdapter();
 
-        setupSpinCategories();
+        setupCategoriesDialog();
+
+        setupCategoriesButton();
+
+        setupCategorieAddButton();
 
         setupListViewListener();
-
-        setupSpinnerListener();
 
     }
 
@@ -65,14 +87,134 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         elvItems.setAdapter(itemsAdapter);
     }
 
-    public void setupSpinCategories(){
+    /*public void setupCategoriesButton(){
         categories = loadCat();
-        spinAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
+        spinAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, categories);
         spinAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
         spinCategories = (Spinner) findViewById(R.id.categories);
         spinCategories.setAdapter(spinAdapter);
         spinCategories.setOnItemSelectedListener(this);
+    }*/
+
+    public void setupCategoriesDialog(){
+        dialog = new Dialog(MainActivity.this);
+        dialog.setContentView(R.layout.categories);
+        dialog.setTitle("Choisir une catégorie");
+
+        dialog.setCancelable(true);
+        dialog.setCanceledOnTouchOutside(true);
+    }
+
+    public void setupCategoriesButton(){
+        categories = loadCat();
+        buttonCats = (Button)findViewById(R.id.categories);
+        buttonCats.setOnClickListener(new Button.OnClickListener() {
+
+            @Override
+            public void onClick(View arg0) {
+                showDialog(CUSTOM_DIALOG_ID);
+            }
+        });
+    }
+
+    public void setupCategorieAddButton(){
+        categories = loadCat();
+        buttonAddCat = (Button)dialog.findViewById(R.id.btnAddCat);
+        buttonAddCat.setOnClickListener(new Button.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                boolean isAdded = onAddCat(v);
+                if (isAdded) dismissDialog(CUSTOM_DIALOG_ID);
+            }
+        });
+    }
+
+    @Override
+    protected Dialog onCreateDialog(int id) {
+
+        switch(id) {
+            case CUSTOM_DIALOG_ID:
+
+                dialog.setOnCancelListener(new DialogInterface.OnCancelListener(){
+
+                    @Override
+                    public void onCancel(DialogInterface d) {
+                        EditText catName = (EditText) dialog.findViewById(R.id.catName);
+                        catName.setText("");
+
+                        /*Toast.makeText(MainActivity.this,
+                                "OnCancelListener",
+                                Toast.LENGTH_LONG).show();*/
+                    }
+                });
+
+                dialog.setOnDismissListener(new DialogInterface.OnDismissListener(){
+
+                    @Override
+                    public void onDismiss(DialogInterface d) {
+                        EditText catName = (EditText) dialog.findViewById(R.id.catName);
+                        catName.setText("");
+
+                        /*Toast.makeText(MainActivity.this,
+                                "OnDismissListener",
+                                Toast.LENGTH_LONG).show();*/
+                    }
+                });
+
+                //Prepare ListView in dialog
+                lvCats = (ListView)dialog.findViewById(R.id.categoriesList);
+                catsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, categories);
+                lvCats.setAdapter(catsAdapter);
+                lvCats.setOnItemClickListener(new AdapterView.OnItemClickListener(){
+
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view,
+                                            int position, long id) {
+
+                        /*Toast.makeText(MainActivity.this,
+                                parent.getItemAtPosition(position).toString() + " clicked",
+                                Toast.LENGTH_LONG).show();*/
+                        catText = parent.getItemAtPosition(position).toString();
+                        buttonCats.setText(catText);
+                        dismissDialog(CUSTOM_DIALOG_ID);
+                    }
+                });
+                lvCats.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+
+                    @Override
+                    public boolean onItemLongClick(AdapterView<?> parent, View view,
+                                                   int position, long id) {
+
+                        /*Toast.makeText(MainActivity.this,
+                                parent.getItemAtPosition(position).toString() + " long clicked",
+                                Toast.LENGTH_LONG).show();*/
+
+                        catText = "";
+                        buttonCats.setText("Catégorie");
+                        categories.remove(position);
+                        catsAdapter.notifyDataSetChanged();
+                        saveCat();
+                        return false;
+                    }
+                });
+
+                break;
+        }
+
+        return dialog;
+    }
+
+    @Override
+    protected void onPrepareDialog(int id, Dialog dialog, Bundle bundle) {
+        super.onPrepareDialog(id, dialog, bundle);
+
+        switch(id) {
+            case CUSTOM_DIALOG_ID:
+                //
+                break;
+        }
     }
 
     @Override
@@ -211,7 +353,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         );
     }
 
-    private void setupSpinnerListener() {
+    /*private void setupSpinnerListener() {
         spinCategories.setOnItemLongClickListener(
                 new AdapterView.OnItemLongClickListener() {
                     @Override
@@ -224,25 +366,33 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
                     }
                 }
         );
-    }
+    }*/
 
     public void onAddItem(View v) {
         EditText etNewItem = (EditText) findViewById(R.id.etNewItem);
         String itemText = etNewItem.getText().toString();
         Child child = new Child(itemText);
-        if (!itemText.equals("")) {
-            itemsAdapter.addItem(child, selCat);
+        if (!(itemText.equals("") || catText.equals(""))) {
+            itemsAdapter.addItem(child, catText);
             itemsAdapter.notifyDataSetChanged();
             etNewItem.setText("");
             writeItems();
         }
     }
 
-    public void onAddCat(View v){
-        categories.add("pouet_"+categories.size());
-        saveCat();
-        spinAdapter.notifyDataSetChanged();
+    public boolean onAddCat(View v){
+        EditText catName = (EditText) dialog.findViewById(R.id.catName);
+        catText = catName.getText().toString();
+        if (!catText.equals("") && !categories.contains(catText)) {
+            categories.add(catText);
+            catName.setText("");
+            saveCat();
+            catsAdapter.notifyDataSetChanged();
+            buttonCats.setText(catText);
+            return true;
+        } else return false;
     }
+
 
     public void showDatePickerDialog(View v) {
         DialogFragment newFragment = new DatePickerFragment();
@@ -315,7 +465,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
         return array;
     }
 
-    @Override
+    /*@Override
     public void onItemSelected(AdapterView<?> adapterView, View view, int pos, long id) {
         spinCategories.setSelection(pos);
         selCat = (String) spinCategories.getSelectedItem();
@@ -324,5 +474,5 @@ public class MainActivity extends Activity implements AdapterView.OnItemSelected
     @Override
     public void onNothingSelected(AdapterView<?> adapterView) {
 
-    }
+    }*/
 }
