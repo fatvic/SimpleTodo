@@ -12,49 +12,50 @@ import java.util.ArrayList;
 public class ExpandableListAdapter extends BaseExpandableListAdapter {
     LayoutInflater inflater;
 
-    private ArrayList<Parent> parents;
-    public ExpandableListAdapter(Context context,ArrayList<Parent> parents) {
+    private ArrayList<Group> groups;
+
+    public ExpandableListAdapter(Context context,ArrayList<Group> groups) {
         super();
-        this.parents = parents;
+        this.groups = groups;
         inflater= (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
 
     public void addItem(Child child, String groupName){
-        int size = parents.size();
+        int size = groups.size();
         boolean found = false;
         int i;
         for (i = 0; !found && i < size; i++){
-            if (parents.get(i).getGroupName().equals(groupName)) found = true;
+            if (groups.get(i).getGroupName().equals(groupName)) found = true;
         }
         if (found) {
-            parents.get(i - 1).addChild(child);
+            groups.get(i - 1).addChild(child);
         }
         else {
-            Parent parent = new Parent(groupName);
-            parent.addChild(child);
-            parents.add(parent);
+            Group group = new Group(groupName);
+            group.addChild(child);
+            groups.add(group);
         }
     }
 
-    public boolean addGroup(String groupName){
-        int size = parents.size();
+    public boolean addGroup(String parentName){
+        int size = groups.size();
         boolean found = false;
         int i;
         for (i = 0; !found && i < size; i++){
-            if (parents.get(i).getGroupName().equals(groupName)) found = true;
+            if (groups.get(i).getGroupName().equals(parentName)) found = true;
         }
         if (found) {
             return false;
         }
         else {
-            Parent parent = new Parent(groupName);
-            parents.add(parent);
+            Group group = new Group(parentName);
+            groups.add(group);
             return true;
         }
     }
 
     public Child getChild(int groupPosition, int childPosition) {
-        ArrayList<Child> children= parents.get(groupPosition).getChildren();
+        ArrayList<Child> children= groups.get(groupPosition).getChildren();
         return children.get(childPosition);
     }
 
@@ -64,7 +65,7 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
 
     @Override
     public int getChildrenCount(int groupPosition) {
-        ArrayList<Child> children= parents.get(groupPosition).getChildren();
+        ArrayList<Child> children= groups.get(groupPosition).getChildren();
         return children.size();
     }
 
@@ -80,12 +81,12 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
         return convertView;
     }
 
-    public Parent getGroup(int groupPosition) {
-        return parents.get(groupPosition);
+    public Group getGroup(int groupPosition) {
+        return groups.get(groupPosition);
     }
 
     public int getGroupCount() {
-        return parents.size();
+        return groups.size();
     }
 
     public long getGroupId(int groupPosition) {
@@ -95,7 +96,7 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
     public View getGroupView(int groupPosition, boolean isExpanded, View convertView,
                              ViewGroup parent) {
         TextView groupName;
-        Parent group = getGroup(groupPosition);
+        Group group = getGroup(groupPosition);
         if(convertView==null) {
             convertView=inflater.inflate(R.layout.group_view, null);
         }

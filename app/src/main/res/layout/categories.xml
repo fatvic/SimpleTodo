@@ -5,9 +5,9 @@ xmlns:tools="http://schemas.android.com/tools"
 android:id="@+id/categoriesDialog"
 android:layout_width="match_parent"
 android:layout_height="wrap_content"
-    android:minWidth="300dp"
+android:minWidth="300dp"
 tools:context=".MainActivity"
-    android:padding="20dp">
+android:padding="20dp">
 
 <ListView
     android:layout_width="wrap_content"
@@ -32,6 +32,6 @@ tools:context=".MainActivity"
     android:id="@+id/btnAddCat"
     android:layout_alignBottom="@+id/catName"
     android:layout_alignRight="@+id/categoriesList"
-    android:layout_alignEnd="@+id/categoriesList" />
+    android:layout_alignEnd="@+id/categoriesList"/>
 
 </RelativeLayout>

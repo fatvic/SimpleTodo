@@ -19,6 +19,7 @@ import android.widget.EditText;
 import android.widget.ExpandableListView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -27,7 +28,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.security.acl.Group;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -36,47 +36,35 @@ public class MainActivity extends Activity {
 
     private ExpandableListAdapter itemsAdapter;
     private ExpandableListView elvItems;
-    private ArrayList<Parent> listTasks;
+    private ArrayList<Group> listTasks;
+    //private ListTasks listTasks;
+
+    static final int CUSTOM_DIALOG_ID = 0;
+    private Dialog dialog;
 
     private Button buttonCats;
     private Button buttonAddCat;
-    static final int CUSTOM_DIALOG_ID = 0;
 
-    private Dialog dialog;
-
-    ListView lvCats;
     ArrayAdapter<String> catsAdapter;
-    String[] cats = {
-            "January", "February", "March", "April",
-            "May", "June", "July", "August", "September",
-            "October", "November", "December"};
-
-    ArrayList<String> categories = new ArrayList<>(Arrays.asList(cats));
-
-
-    //Spinner spinCategories;
-    //private ArrayAdapter<String> spinAdapter;
+    ListView lvCats;
+    ArrayList<String> categories;
     private String catText = "";
-    //private ArrayList<String> categories;// = {"Course", "Travail", "Shopping", "Banque", "Nouvelle catégorie"};
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        listTasks = new ArrayList<>();
-
         readItems();
+        loadCat();
 
         setupItemsAdapter();
 
         setupCategoriesDialog();
 
-        setupCategoriesButton();
+        setupCategorieButtons();
 
-        setupCategorieAddButton();
-
-        setupListViewListener();
+        setupExpandableListViewListener();
 
     }
 
@@ -87,16 +75,6 @@ public class MainActivity extends Activity {
         elvItems.setAdapter(itemsAdapter);
     }
 
-    /*public void setupCategoriesButton(){
-        categories = loadCat();
-        spinAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, categories);
-        spinAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-        spinCategories = (Spinner) findViewById(R.id.categories);
-        spinCategories.setAdapter(spinAdapter);
-        spinCategories.setOnItemSelectedListener(this);
-    }*/
-
     public void setupCategoriesDialog(){
         dialog = new Dialog(MainActivity.this);
         dialog.setContentView(R.layout.categories);
@@ -106,26 +84,23 @@ public class MainActivity extends Activity {
         dialog.setCanceledOnTouchOutside(true);
     }
 
-    public void setupCategoriesButton(){
-        categories = loadCat();
-        buttonCats = (Button)findViewById(R.id.categories);
-        buttonCats.setOnClickListener(new Button.OnClickListener() {
-
-            @Override
-            public void onClick(View arg0) {
-                showDialog(CUSTOM_DIALOG_ID);
-            }
-        });
+    public void onCatClick(View v) {
+        showDialog(CUSTOM_DIALOG_ID);
     }
 
-    public void setupCategorieAddButton(){
-        categories = loadCat();
+    /*public void onAddCat(View v) {
+        boolean isAdded = addCat(v);
+        if (isAdded) dismissDialog(CUSTOM_DIALOG_ID);
+    }*/
+
+    public void setupCategorieButtons(){
+        buttonCats = (Button)findViewById(R.id.categories);
         buttonAddCat = (Button)dialog.findViewById(R.id.btnAddCat);
         buttonAddCat.setOnClickListener(new Button.OnClickListener() {
 
             @Override
             public void onClick(View v) {
-                boolean isAdded = onAddCat(v);
+                boolean isAdded = addCat();
                 if (isAdded) dismissDialog(CUSTOM_DIALOG_ID);
             }
         });
@@ -196,7 +171,7 @@ public class MainActivity extends Activity {
                         categories.remove(position);
                         catsAdapter.notifyDataSetChanged();
                         saveCat();
-                        return false;
+                        return true;
                     }
                 });
 
@@ -238,13 +213,17 @@ public class MainActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void setupListViewListener() {
+    private void setupExpandableListViewListener() {
         elvItems.setOnGroupClickListener(
                 new ExpandableListView.OnGroupClickListener() {
 
                     @Override
                     public boolean onGroupClick(ExpandableListView parent, View v,
                                                 int groupPosition, long id) {
+
+                        catText = listTasks.get(groupPosition).getGroupName();
+                        buttonCats.setText(catText);
+
                     /* Toast.makeText(getApplicationContext(),
                      "Group Clicked " + listDataHeader.get(groupPosition),
                      Toast.LENGTH_SHORT).show();*/
@@ -287,8 +266,11 @@ public class MainActivity extends Activity {
                     @Override
                     public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
 
+                        /*Child child = listTasks.get(groupPosition).getChildren().get(childPosition);
+                        Group group = listTasks.get(groupPosition);
                         String groupName = listTasks.get(groupPosition).getGroupName();
-                        String childName = listTasks.get(groupPosition).getChildren().get(childPosition).getChildName();
+                        String childName = child.getChildName();
+                        String childDescription = child.getDescription();*/
 
                     /*Toast.makeText(
                             getApplicationContext(),
@@ -296,9 +278,16 @@ public class MainActivity extends Activity {
                             .show();*/
 
                         // Launching new Activity on selecting single List Item
-                        Intent i = new Intent(getApplicationContext(), Child.class);
+                        Intent i = new Intent(getApplicationContext(), SingleListItem.class);
+                        //Bundle b = new Bundle();
                         // sending data to new activity
-                        i.putExtra("task", childName);
+                        //b.putParcelable("listTasks", listTasks);
+                        //b.putParcelable("group", group);
+                        //b.putParcelable("task", child);
+                        //i.putParcelableArrayListExtra("listTasks", listTasks);
+                        i.putExtra("groupPos", groupPosition);
+                        i.putExtra("childPos", childPosition);
+                        //i.putExtras(b);
                         startActivity(i);
 
                         return false;
@@ -340,33 +329,18 @@ public class MainActivity extends Activity {
                     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
                         // selected item
-                        String task = ((TextView) view).getText().toString();
+                        /*String task = ((TextView) view).getText().toString();
 
                         // Launching new Activity on selecting single List Item
                         Intent i = new Intent(getApplicationContext(), Group.class);
                         // sending data to new activity
                         i.putExtra("task", task);
-                        startActivity(i);
+                        startActivity(i);*/
 
                     }
                 }
         );
     }
-
-    /*private void setupSpinnerListener() {
-        spinCategories.setOnItemLongClickListener(
-                new AdapterView.OnItemLongClickListener() {
-                    @Override
-                    public boolean onItemLongClick(AdapterView<?> adapter, View view, int pos, long id) {
-
-                        categories.remove(pos);
-                        spinAdapter.notifyDataSetChanged();
-
-                        return true;
-                    }
-                }
-        );
-    }*/
 
     public void onAddItem(View v) {
         EditText etNewItem = (EditText) findViewById(R.id.etNewItem);
@@ -380,7 +354,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    public boolean onAddCat(View v){
+    public boolean addCat(){
         EditText catName = (EditText) dialog.findViewById(R.id.catName);
         catText = catName.getText().toString();
         if (!catText.equals("") && !categories.contains(catText)) {
@@ -389,14 +363,9 @@ public class MainActivity extends Activity {
             saveCat();
             catsAdapter.notifyDataSetChanged();
             buttonCats.setText(catText);
+            listTasks.add(new Group(catText));
             return true;
         } else return false;
-    }
-
-
-    public void showDatePickerDialog(View v) {
-        DialogFragment newFragment = new DatePickerFragment();
-        newFragment.show(getFragmentManager().beginTransaction(), "datePicker");
     }
 
     public void readItems() {
@@ -407,7 +376,10 @@ public class MainActivity extends Activity {
         try {
             fis = new FileInputStream(todoFile);
             ObjectInputStream oi = new ObjectInputStream(fis);
-            listTasks = (ArrayList<Parent>) oi.readObject();
+            listTasks = (ListTasks) oi.readObject();
+            /*Toast.makeText(MainActivity.this,
+                                "Items read !",
+                                Toast.LENGTH_LONG).show();*/
             oi.close();
         } catch (FileNotFoundException e) {
             Log.e("InternalStorage", e.getMessage());
@@ -416,6 +388,7 @@ public class MainActivity extends Activity {
         } catch (ClassNotFoundException e) {
             Log.e("InternalStorage", e.getMessage());
         }
+        if (listTasks==null) listTasks = new ListTasks();
     }
 
     public void writeItems() {
@@ -442,8 +415,8 @@ public class MainActivity extends Activity {
         return saveArray(cat, "categories", getApplicationContext());
     }
 
-    public ArrayList<String> loadCat(){
-        return new ArrayList<>(Arrays.asList(loadArray("categories", getApplicationContext())));
+    public void loadCat(){
+        categories =  new ArrayList<>(Arrays.asList(loadArray("categories", getApplicationContext())));
     }
 
     public boolean saveArray(String[] array, String arrayName, Context mContext) {
@@ -465,14 +438,4 @@ public class MainActivity extends Activity {
         return array;
     }
 
-    /*@Override
-    public void onItemSelected(AdapterView<?> adapterView, View view, int pos, long id) {
-        spinCategories.setSelection(pos);
-        selCat = (String) spinCategories.getSelectedItem();
-    }
-
-    @Override
-    public void onNothingSelected(AdapterView<?> adapterView) {
-
-    }*/
 }

@@ -3,12 +3,15 @@ package com.example.victor.simpletodo;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.widget.TextView;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Parent extends Activity implements Serializable {
+public class Group extends Activity implements Serializable, Parcelable {
+
     static private int ID=0;
     static final long serialVersionUID =-1903057014897953692L;
     private int groupId;
@@ -20,7 +23,7 @@ public class Parent extends Activity implements Serializable {
         super.onCreate(savedInstanceState);
         this.setContentView(R.layout.single_list_item_view);
 
-        TextView txtLabel = (TextView) findViewById(R.id.task_label);
+        TextView txtLabel = (TextView) findViewById(R.id.label);
         //TextView txtComment = (TextView) findViewById(R.id.task_comment);
 
         Intent i = getIntent();
@@ -31,21 +34,21 @@ public class Parent extends Activity implements Serializable {
 
     }
 
-    public Parent(){
+    public Group(){
         this.groupId = ID++;
         this.groupName = new String();
         this.children = new ArrayList<>();
     }
 
-    public Parent(String groupName,
-                  ArrayList<Child> children) {
+    public Group(String groupName,
+                 ArrayList<Child> children) {
         super();
         this.groupId = ID++;
         this.groupName = groupName;
         this.children = children;
     }
 
-    public Parent(String groupName) {
+    public Group(String groupName) {
         super();
         this.groupId = ID++;
         this.groupName = groupName;
@@ -76,5 +79,40 @@ public class Parent extends Activity implements Serializable {
         this.children.add(child);
     }
 
+    public Group(Parcel in){
+        this();
+        readFromParcel(in);
+    }
 
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int i) {
+        dest.writeInt(groupId);
+        dest.writeString(groupName);
+        dest.writeTypedList(children);
+    }
+
+    public void readFromParcel(Parcel in){
+        this.groupId = in.readInt();
+        this.groupName = in.readString();
+        in.readTypedList(children, Child.CREATOR);
+    }
+
+    public static final Parcelable.Creator<Group> CREATOR = new Creator<Group>(){
+
+        @Override
+        public Group createFromParcel(Parcel source) {
+            return new Group(source);
+        }
+
+        @Override
+        public Group[] newArray(int size) {
+            return new Group[size];
+        }
+    };
 }
