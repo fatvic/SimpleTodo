@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:tools="http://schemas.android.com/tools"
+android:id="@+id/categoriesDialog"
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:minWidth="300dp"
+tools:context=".MainActivity"
+android:padding="20dp">
+
+<ListView
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:id="@+id/categoriesList"
+    android:layout_below="@+id/catName" />
+
+<EditText
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:id="@+id/catName"
+    android:hint="Nouvelle catégorie"
+    android:layout_alignParentLeft="true"
+    android:layout_alignParentStart="true"
+    android:layout_toStartOf="@+id/btnAddCat"
+    android:layout_toLeftOf="@+id/btnAddCat" />
+
+<Button
+    android:layout_width="wrap_content"
+    android:layout_height="fill_parent"
+    android:text="Ajouter"
+    android:id="@+id/btnAddCat"
+    android:layout_alignBottom="@+id/catName"
+    android:layout_alignRight="@+id/categoriesList"
+    android:layout_alignEnd="@+id/categoriesList"/>
+
+</RelativeLayout>

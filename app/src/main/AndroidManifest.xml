@@ -22,7 +22,7 @@
 
         <activity
             android:name=".SingleListItem"
-            android:label="Single Item Selected"/>
+            android:label="Task Selected"/>
 
         <meta-data
             android:name="com.google.android.gms.version"
