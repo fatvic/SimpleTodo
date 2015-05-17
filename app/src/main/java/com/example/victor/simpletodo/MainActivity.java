@@ -21,6 +21,13 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.parse.FindCallback;
+import com.parse.Parse;
+import com.parse.ParseClassName;
+import com.parse.ParseException;
+import com.parse.ParseObject;
+import com.parse.ParseQuery;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -30,9 +37,14 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+
+import bolts.Task;
 
 
 public class MainActivity extends Activity {
+
+
 
     private ExpandableListAdapter itemsAdapter;
     private ExpandableListView elvItems;
@@ -54,6 +66,13 @@ public class MainActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Enable Local Datastore.
+        Parse.enableLocalDatastore(this);
+
+        Parse.initialize(this, "R4QGlKuCnu2T6hJz32bgYewRF3VPNtrJAFfSk8sp", "p5F7ZtkFXRlanjmcfJfvuui0QASzg8am2N237TRV");
+        ParseObject.registerSubclass(Child.class);
+        ParseObject.registerSubclass(Group.class);
 
         readItems();
         loadCat();
@@ -270,7 +289,7 @@ public class MainActivity extends Activity {
                         Group group = listTasks.get(groupPosition);
                         String groupName = listTasks.get(groupPosition).getGroupName();
                         String childName = child.getChildName();
-                        String childDescription = child.getDescription();*/
+                        String childDescription = child.getComment();*/
 
                     /*Toast.makeText(
                             getApplicationContext(),
@@ -345,11 +364,14 @@ public class MainActivity extends Activity {
     public void onAddItem(View v) {
         EditText etNewItem = (EditText) findViewById(R.id.etNewItem);
         String itemText = etNewItem.getText().toString();
-        Child child = new Child(itemText);
         if (!(itemText.equals("") || catText.equals(""))) {
+            Child child = new Child(itemText);
+            child.setChildName(etNewItem.getText().toString());
+            child.setCompleted(false);
+            child.saveEventually();
+            etNewItem.setText("");
             itemsAdapter.addItem(child, catText);
             itemsAdapter.notifyDataSetChanged();
-            etNewItem.setText("");
             writeItems();
         }
     }
@@ -408,6 +430,8 @@ public class MainActivity extends Activity {
             Log.e("InternalStorage", e.getMessage());
         }
 
+        updateData();
+
     }
 
     public boolean saveCat(){
@@ -436,6 +460,20 @@ public class MainActivity extends Activity {
         for(int i=0;i<size;i++)
             array[i] = prefs.getString(arrayName + "_" + i, null);
         return array;
+    }
+
+    public void updateData(){
+        ParseQuery<Group> query = ParseQuery.getQuery(Group.class);
+        query.findInBackground(new FindCallback<Group>() {
+            @Override
+            public void done(List<Group> listTasks, ParseException error) {
+                if(listTasks != null){
+                    itemsAdapter = new ExpandableListAdapter(getApplicationContext(), (ArrayList)listTasks);
+                    //itemsAdapter.clear();
+                    //itemsAdapter.addAll(tasks);
+                }
+            }
+        });
     }
 
 }

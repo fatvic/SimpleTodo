@@ -1,38 +1,23 @@
 package com.example.victor.simpletodo;
 
-import android.app.Activity;
-import android.content.Intent;
-import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.widget.TextView;
+
+import com.parse.ParseClassName;
+import com.parse.ParseObject;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Group extends Activity implements Serializable, Parcelable {
+//Annotation qui défini le nom de la table dans Parse
+@ParseClassName("Group")
+public class Group extends ParseObject implements Serializable, Parcelable {
 
     static private int ID=0;
     static final long serialVersionUID =-1903057014897953692L;
     private int groupId;
     private String groupName;
     private ArrayList<Child> children;
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        this.setContentView(R.layout.single_list_item_view);
-
-        TextView txtLabel = (TextView) findViewById(R.id.label);
-        //TextView txtComment = (TextView) findViewById(R.id.task_comment);
-
-        Intent i = getIntent();
-        // getting attached intent data
-        String label = i.getStringExtra("task");
-        // displaying selected product name
-        txtLabel.setText(label);
-
-    }
 
     public Group(){
         this.groupId = ID++;

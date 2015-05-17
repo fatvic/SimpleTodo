@@ -1,6 +1,7 @@
 package com.example.victor.simpletodo;
 
 import android.content.Context;
+import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,6 +9,7 @@ import android.widget.BaseExpandableListAdapter;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+
 
 public class ExpandableListAdapter extends BaseExpandableListAdapter {
     LayoutInflater inflater;
@@ -54,6 +56,22 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
         }
     }
 
+    public boolean addGroup (Group group) {
+        int size = groups.size();
+        boolean found = false;
+        int i;
+        for (i = 0; !found && i < size; i++){
+            if (groups.get(i).getGroupName().equals(group.getGroupName())) found = true;
+        }
+        if (found) {
+            return false;
+        }
+        else {
+            groups.add(group);
+            return true;
+        }
+    }
+
     public Child getChild(int groupPosition, int childPosition) {
         ArrayList<Child> children= groups.get(groupPosition).getChildren();
         return children.get(childPosition);
@@ -78,7 +96,15 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
         }
         childName=(TextView) convertView.findViewById(R.id.textViewChildName);
         childName.setText(child.getChildName());
+
+        if(child.isCompleted()){
+            childName.setPaintFlags(childName.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+        } else{
+            childName.setPaintFlags(childName.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
+        }
+
         return convertView;
+
     }
 
     public Group getGroup(int groupPosition) {
@@ -112,4 +138,5 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
     public boolean hasStableIds() {
         return true;
     }
+
 }

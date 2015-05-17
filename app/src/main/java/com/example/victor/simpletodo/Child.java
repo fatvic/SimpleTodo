@@ -1,42 +1,45 @@
 package com.example.victor.simpletodo;
 
-import android.app.Activity;
-import android.content.Intent;
-import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.view.View;
-import android.widget.TextView;
+
+import com.parse.ParseClassName;
+import com.parse.ParseObject;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Child extends Activity implements Serializable, Parcelable {
+//Annotation qui défini le nom de la table dans Parse
+@ParseClassName("Child")
+public class Child extends ParseObject implements Serializable, Parcelable {
 
     private static int ID = 0;
     static final long serialVersionUID =-1903057014897953592L;
     private int childId;
     private String childName;
-    private String description;
+    private String comment;
     private ArrayList<String> tasks;
     private String date;
+    private boolean isCompleted;
 
     public Child() {
         super();
         this.childId = ID++;
         this.childName = new String();
-        this.description = new String();
+        this.comment = new String();
         this.tasks = new ArrayList<>();
         this.date = new String();
+        this.isCompleted = false;
     }
 
     public Child(String childName) {
         super();
         this.childId = ID++;
         this.childName = childName;
-        this.description = new String();
+        this.comment = new String();
         this.tasks = new ArrayList<>();
         this.date = new String();
+        this.isCompleted = false;
     }
 
     public int getChildId() {
@@ -49,13 +52,14 @@ public class Child extends Activity implements Serializable, Parcelable {
         return childName;
     }
     public void setChildName(String childName) {
+        put("name", childName);
         this.childName = childName;
     }
-    public String getDescription() {
-        return description;
+    public String getComment() {
+        return comment;
     }
-    public void setDescription(String description) {
-        this.description = description;
+    public void setComment(String comment) {
+        this.comment = comment;
     }
     public ArrayList<String> getTasks() {
         return tasks;
@@ -84,14 +88,14 @@ public class Child extends Activity implements Serializable, Parcelable {
     public void writeToParcel(Parcel dest, int i) {
         dest.writeInt(childId);
         dest.writeString(childName);
-        dest.writeString(description);
+        dest.writeString(comment);
         dest.writeStringList(tasks);
     }
 
     public void readFromParcel(Parcel in){
         this.childId = in.readInt();
         this.childName = in.readString();
-        this.description = in.readString();
+        this.comment = in.readString();
         in.readStringList(this.tasks);
     }
 
@@ -107,4 +111,20 @@ public class Child extends Activity implements Serializable, Parcelable {
             return new Child[size];
         }
     };
+
+    public boolean isCompleted(){
+        return getBoolean("completed");
+    }
+    public void setCompleted(boolean complete){
+        this.isCompleted = complete;
+        put("completed", complete);
+    }
+
+    /*public String getName(){
+        return getString("name");
+    }
+    public void setName(String name){
+        put("name", name);
+    }*/
+
 }

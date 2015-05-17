@@ -12,7 +12,6 @@ import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -71,7 +70,7 @@ public class SingleListItem extends Activity {
         etDate = (EditText) findViewById(R.id.etDate);
 
         tvLabel.setText(task.getChildName() + " (" + groupName + ")");
-        etComment.setText(task.getDescription());
+        etComment.setText(task.getComment());
         etDate.setInputType(InputType.TYPE_NULL);
         etDate.setText(task.getDate());
         dateFormatter = new SimpleDateFormat("dd-MM-yyyy", Locale.US);
@@ -129,7 +128,7 @@ public class SingleListItem extends Activity {
     }
 
     public void saveComment(){
-        task.setDescription(etComment.getText().toString());
+        task.setComment(etComment.getText().toString());
     }
 
     public void onAddSubItem(View v) {
