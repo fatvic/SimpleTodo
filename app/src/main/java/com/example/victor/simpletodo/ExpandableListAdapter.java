@@ -95,7 +95,7 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
             convertView=inflater.inflate(R.layout.child_view, null);
         }
         childName=(TextView) convertView.findViewById(R.id.textViewChildName);
-        childName.setText(child.getChildName());
+        childName.setText(child.getCloudChildName());
 
         if(child.isCompleted()){
             childName.setPaintFlags(childName.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);

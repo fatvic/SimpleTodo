@@ -2,7 +2,6 @@ package com.example.victor.simpletodo;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -18,15 +17,16 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ExpandableListView;
 import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import com.parse.FindCallback;
+import com.parse.GetCallback;
+import com.parse.LogInCallback;
 import com.parse.Parse;
-import com.parse.ParseClassName;
 import com.parse.ParseException;
 import com.parse.ParseObject;
 import com.parse.ParseQuery;
+import com.parse.ParseUser;
+import com.parse.SignUpCallback;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,8 +39,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import bolts.Task;
-
 
 public class MainActivity extends Activity {
 
@@ -48,8 +46,7 @@ public class MainActivity extends Activity {
 
     private ExpandableListAdapter itemsAdapter;
     private ExpandableListView elvItems;
-    private ArrayList<Group> listTasks;
-    //private ListTasks listTasks;
+    private ArrayList<Group> listTasks = new ArrayList<>();
 
     static final int CUSTOM_DIALOG_ID = 0;
     private Dialog dialog;
@@ -59,7 +56,7 @@ public class MainActivity extends Activity {
 
     ArrayAdapter<String> catsAdapter;
     ListView lvCats;
-    ArrayList<String> categories;
+    ArrayList<String> categories = new ArrayList<>();
     private String catText = "";
 
     @Override
@@ -67,21 +64,25 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Enable Local Datastore.
+
         Parse.enableLocalDatastore(this);
 
         Parse.initialize(this, "R4QGlKuCnu2T6hJz32bgYewRF3VPNtrJAFfSk8sp", "p5F7ZtkFXRlanjmcfJfvuui0QASzg8am2N237TRV");
         ParseObject.registerSubclass(Child.class);
         ParseObject.registerSubclass(Group.class);
 
-        readItems();
-        loadCat();
+        //readItems();
+        //loadCat();
 
         setupItemsAdapter();
 
         setupCategoriesDialog();
 
+        loadTasks();
+        loadCats();
+
         setupCategorieButtons();
+
 
         setupExpandableListViewListener();
 
@@ -97,7 +98,7 @@ public class MainActivity extends Activity {
     public void setupCategoriesDialog(){
         dialog = new Dialog(MainActivity.this);
         dialog.setContentView(R.layout.categories);
-        dialog.setTitle("Choisir une catÃ©gorie");
+        dialog.setTitle("Choisir une catégorie");
 
         dialog.setCancelable(true);
         dialog.setCanceledOnTouchOutside(true);
@@ -186,10 +187,15 @@ public class MainActivity extends Activity {
                                 Toast.LENGTH_LONG).show();*/
 
                         catText = "";
-                        buttonCats.setText("CatÃ©gorie");
+                        buttonCats.setText("Catégorie");
+                        String catName = categories.get(position);
+
+                        deleteCat(catName);
+                        //deleteTasks(catName);
+
                         categories.remove(position);
                         catsAdapter.notifyDataSetChanged();
-                        saveCat();
+                        //saveCat();
                         return true;
                     }
                 });
@@ -285,28 +291,12 @@ public class MainActivity extends Activity {
                     @Override
                     public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
 
-                        /*Child child = listTasks.get(groupPosition).getChildren().get(childPosition);
-                        Group group = listTasks.get(groupPosition);
-                        String groupName = listTasks.get(groupPosition).getGroupName();
-                        String childName = child.getChildName();
-                        String childDescription = child.getComment();*/
+                        Child child = listTasks.get(groupPosition).getChildren().get(childPosition);
+                        child.getObjectId();
 
-                    /*Toast.makeText(
-                            getApplicationContext(),
-                            groupName + " : " + childName, Toast.LENGTH_SHORT)
-                            .show();*/
-
-                        // Launching new Activity on selecting single List Item
                         Intent i = new Intent(getApplicationContext(), SingleListItem.class);
-                        //Bundle b = new Bundle();
-                        // sending data to new activity
-                        //b.putParcelable("listTasks", listTasks);
-                        //b.putParcelable("group", group);
-                        //b.putParcelable("task", child);
-                        //i.putParcelableArrayListExtra("listTasks", listTasks);
-                        i.putExtra("groupPos", groupPosition);
-                        i.putExtra("childPos", childPosition);
-                        //i.putExtras(b);
+                        i.putExtra("objectId", child.getObjectId());
+
                         startActivity(i);
 
                         return false;
@@ -318,22 +308,39 @@ public class MainActivity extends Activity {
                 new AdapterView.OnItemLongClickListener() {
                     @Override
                     public boolean onItemLongClick(AdapterView<?> adapter, View view, int pos, long id) {
+                        int groupPosition = ExpandableListView.getPackedPositionGroup(id);
+                        int childPosition = ExpandableListView.getPackedPositionChild(id);
 
                         if (ExpandableListView.getPackedPositionType(id) == ExpandableListView.PACKED_POSITION_TYPE_CHILD) {
-                            int groupPosition = ExpandableListView.getPackedPositionGroup(id);
-                            int childPosition = ExpandableListView.getPackedPositionChild(id);
-                            listTasks.get(groupPosition).getChildren().remove(childPosition);
-                            if (listTasks.get(groupPosition).getChildren().size()==0) listTasks.remove(groupPosition);
+
+                            Group group = listTasks.get(groupPosition);
+                            Child child = group.getChildren().get(childPosition);
+
+                            group.getChildren().remove(childPosition);
+                            if (group.getChildren().size()==0) {
+                                deleteCat(group.getGroupName());
+                                listTasks.remove(groupPosition);
+                            }
                             itemsAdapter.notifyDataSetChanged();
 
-                            writeItems();
+                            child.deleteEventually();
+
+                            //writeItems();
                             return true;
                         } else if (ExpandableListView.getPackedPositionType(id) == ExpandableListView.PACKED_POSITION_TYPE_GROUP) {
-                            int groupPosition = ExpandableListView.getPackedPositionGroup(id);
+
+                            Group group = listTasks.get(groupPosition);
+                            ArrayList<Child> children = group.getChildren();
                             listTasks.remove(groupPosition);
                             itemsAdapter.notifyDataSetChanged();
 
-                            writeItems();
+                            deleteCat(group.getGroupName());
+
+                            for (Child child : children) {
+                                child.deleteEventually();
+                            }
+
+                            //writeItems();
                             return true;
                         }
 
@@ -363,16 +370,20 @@ public class MainActivity extends Activity {
 
     public void onAddItem(View v) {
         EditText etNewItem = (EditText) findViewById(R.id.etNewItem);
-        String itemText = etNewItem.getText().toString();
-        if (!(itemText.equals("") || catText.equals(""))) {
-            Child child = new Child(itemText);
-            child.setChildName(etNewItem.getText().toString());
-            child.setCompleted(false);
+        String childName = etNewItem.getText().toString();
+        if (!(childName.equals("") || catText.equals(""))) {
+            Child child = new Child(childName, catText);
+            child.setCloudChildName(childName);
+            child.setCloudParentName(catText);
+            child.setCloudCompleted(false);
+            child.setCloudComment(new String());
+            child.setCloudDate(new String());
+            child.setCloudTasks(new ArrayList<String>());
             child.saveEventually();
             etNewItem.setText("");
             itemsAdapter.addItem(child, catText);
             itemsAdapter.notifyDataSetChanged();
-            writeItems();
+            //writeItems();
         }
     }
 
@@ -380,14 +391,48 @@ public class MainActivity extends Activity {
         EditText catName = (EditText) dialog.findViewById(R.id.catName);
         catText = catName.getText().toString();
         if (!catText.equals("") && !categories.contains(catText)) {
+            Group cat = new Group();
+            cat.setGroupName(catText);
+            cat.saveEventually();
             categories.add(catText);
             catName.setText("");
-            saveCat();
+            //saveCat();
             catsAdapter.notifyDataSetChanged();
             buttonCats.setText(catText);
-            listTasks.add(new Group(catText));
+            //listTasks.add(cat);
             return true;
         } else return false;
+    }
+
+    public void deleteCat(String catName) {
+        ParseQuery<Group> query = ParseQuery.getQuery(Group.class);
+        query.whereEqualTo("groupName", catName);
+        query.getFirstInBackground(new GetCallback<Group>() {
+            public void done(Group cat, ParseException e) {
+                if (cat == null) {
+                    Log.d("category", "The getFirst request failed.");
+                } else {
+                    cat.deleteEventually();
+                    Log.d("category", "Retrieved and deleted the object.");
+                }
+            }
+        });
+    }
+
+    public void deleteTasks(String catName) {
+        ParseQuery<Child> childrenQuery = ParseQuery.getQuery(Child.class);
+        childrenQuery.whereEqualTo("parentName", catName);
+        childrenQuery.findInBackground(new FindCallback<Child>() {
+            public void done(List<Child> children, ParseException e) {
+                if (e == null) {
+                    for (Child child : children) {
+                        child.deleteEventually();
+                    }
+                } else {
+                    Log.d("score", "Error: " + e.getMessage());
+                }
+            }
+        });
     }
 
     public void readItems() {
@@ -430,7 +475,7 @@ public class MainActivity extends Activity {
             Log.e("InternalStorage", e.getMessage());
         }
 
-        updateData();
+        //updateData();
 
     }
 
@@ -462,18 +507,69 @@ public class MainActivity extends Activity {
         return array;
     }
 
-    public void updateData(){
-        ParseQuery<Group> query = ParseQuery.getQuery(Group.class);
-        query.findInBackground(new FindCallback<Group>() {
+    public void loadCats() {
+
+        ParseQuery<Group> groupsQuery = ParseQuery.getQuery(Group.class);
+        groupsQuery.findInBackground(new FindCallback<Group>() {
             @Override
-            public void done(List<Group> listTasks, ParseException error) {
-                if(listTasks != null){
-                    itemsAdapter = new ExpandableListAdapter(getApplicationContext(), (ArrayList)listTasks);
-                    //itemsAdapter.clear();
-                    //itemsAdapter.addAll(tasks);
+            public void done(List<Group> groups, ParseException error) {
+                if (groups != null) {
+                    for (final Group cat : groups) {
+                        final String catName = cat.getGroupName();
+                        categories.add(catName);
+                    }
                 }
             }
         });
     }
 
+    public void loadTasks() {
+
+        ParseQuery<Child> childrenQuery = ParseQuery.getQuery(Child.class);
+        childrenQuery.findInBackground(new FindCallback<Child>() {
+            public void done(List<Child> children, ParseException e) {
+                if (e == null) {
+                    if (children.size() > 0) {
+                        for (Child child : children) {
+                            itemsAdapter.addItem(child, child.getCloudParentName());
+                            itemsAdapter.notifyDataSetChanged();
+                        }
+                    }
+                } else {
+                    Log.d("score", "Error: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    public void signUp(String userName, String passWord, String email) {
+        ParseUser user = new ParseUser();
+        user.setUsername(userName);
+        user.setPassword(passWord);
+        user.setEmail(email);
+
+        user.signUpInBackground(new SignUpCallback() {
+            public void done(ParseException e) {
+                if (e == null) {
+                    // Hooray! Let them use the app now.
+                } else {
+                    // Sign up didn't succeed. Look at the ParseException
+                    // to figure out what went wrong
+                }
+            }
+        });
+    }
+
+    public void logIn(String userName, String passWord){
+        ParseUser.logInInBackground(userName, passWord, new LogInCallback() {
+            public void done(ParseUser user, ParseException e) {
+                if (user != null) {
+                    // Hooray! The user is logged in.
+                } else {
+                    // Signup failed. Look at the ParseException to see what happened.
+                }
+            }
+        });
+    }
 }
+

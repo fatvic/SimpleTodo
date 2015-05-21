@@ -10,7 +10,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 //Annotation qui défini le nom de la table dans Parse
-@ParseClassName("Group")
+@ParseClassName("Categories")
 public class Group extends ParseObject implements Serializable, Parcelable {
 
     static private int ID=0;
@@ -25,19 +25,18 @@ public class Group extends ParseObject implements Serializable, Parcelable {
         this.children = new ArrayList<>();
     }
 
-    public Group(String groupName,
-                 ArrayList<Child> children) {
-        super();
-        this.groupId = ID++;
-        this.groupName = groupName;
-        this.children = children;
-    }
-
     public Group(String groupName) {
         super();
         this.groupId = ID++;
-        this.groupName = groupName;
+        setGroupName(groupName);
         this.children = new ArrayList<>();
+    }
+
+    public Group(String groupName, ArrayList<Child >children) {
+        super();
+        this.groupId = ID++;
+        setGroupName(groupName);
+        this.children = children;
     }
 
     public int getGroupId() {
@@ -45,10 +44,12 @@ public class Group extends ParseObject implements Serializable, Parcelable {
     }
 
     public String getGroupName() {
-        return groupName;
+        return getString("groupName");
+        //return groupName;
     }
 
     public void setGroupName(String groupName) {
+        put("groupName", groupName);
         this.groupName = groupName;
     }
 
@@ -58,6 +59,7 @@ public class Group extends ParseObject implements Serializable, Parcelable {
 
     public void setChildren(ArrayList<Child> children) {
         this.children = children;
+        put("nbChildren", children.size());
     }
 
     public void addChild(Child child){
