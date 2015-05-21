@@ -48,6 +48,8 @@ public class MainActivity extends Activity {
     private ExpandableListView elvItems;
     private ArrayList<Group> listTasks = new ArrayList<>();
 
+    private Boolean online = false;
+
     static final int CUSTOM_DIALOG_ID = 0;
     private Dialog dialog;
 
@@ -65,31 +67,27 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
 
-        Parse.enableLocalDatastore(this);
+            Parse.enableLocalDatastore(this);
+            Parse.initialize(this, "R4QGlKuCnu2T6hJz32bgYewRF3VPNtrJAFfSk8sp", "p5F7ZtkFXRlanjmcfJfvuui0QASzg8am2N237TRV");
+            ParseObject.registerSubclass(Child.class);
+            ParseObject.registerSubclass(Group.class);
 
-        Parse.initialize(this, "R4QGlKuCnu2T6hJz32bgYewRF3VPNtrJAFfSk8sp", "p5F7ZtkFXRlanjmcfJfvuui0QASzg8am2N237TRV");
-        ParseObject.registerSubclass(Child.class);
-        ParseObject.registerSubclass(Group.class);
 
-        //readItems();
-        //loadCat();
+        loadTasks();
+        loadCats();
 
         setupItemsAdapter();
 
         setupCategoriesDialog();
 
-        loadTasks();
-        loadCats();
-
         setupCategorieButtons();
-
 
         setupExpandableListViewListener();
 
     }
 
     public void setupItemsAdapter(){
-        itemsAdapter = new ExpandableListAdapter(this, listTasks);
+        itemsAdapter = new ExpandableListAdapter(this, listTasks, online);
 
         elvItems = (ExpandableListView) findViewById(R.id.expandableListView);
         elvItems.setAdapter(itemsAdapter);
@@ -98,7 +96,7 @@ public class MainActivity extends Activity {
     public void setupCategoriesDialog(){
         dialog = new Dialog(MainActivity.this);
         dialog.setContentView(R.layout.categories);
-        dialog.setTitle("Choisir une catégorie");
+        dialog.setTitle("Choisir une catÃ©gorie");
 
         dialog.setCancelable(true);
         dialog.setCanceledOnTouchOutside(true);
@@ -187,15 +185,18 @@ public class MainActivity extends Activity {
                                 Toast.LENGTH_LONG).show();*/
 
                         catText = "";
-                        buttonCats.setText("Catégorie");
-                        String catName = categories.get(position);
+                        buttonCats.setText("CatÃ©gorie");
 
-                        deleteCat(catName);
-                        //deleteTasks(catName);
+                        if(online) {
+                            String catName = categories.get(position);
+
+                            deleteCat(catName);
+                            //deleteTasks(catName);
+                        }
 
                         categories.remove(position);
                         catsAdapter.notifyDataSetChanged();
-                        //saveCat();
+                        //writeCat();
                         return true;
                     }
                 });
@@ -246,7 +247,7 @@ public class MainActivity extends Activity {
                     public boolean onGroupClick(ExpandableListView parent, View v,
                                                 int groupPosition, long id) {
 
-                        catText = listTasks.get(groupPosition).getGroupName();
+                        catText = listTasks.get(groupPosition).getGroupName(false);
                         buttonCats.setText(catText);
 
                     /* Toast.makeText(getApplicationContext(),
@@ -292,10 +293,17 @@ public class MainActivity extends Activity {
                     public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
 
                         Child child = listTasks.get(groupPosition).getChildren().get(childPosition);
-                        child.getObjectId();
 
                         Intent i = new Intent(getApplicationContext(), SingleListItem.class);
-                        i.putExtra("objectId", child.getObjectId());
+
+                        i.putExtra("online", online);
+
+                        if (online) {
+                            i.putExtra("objectId", child.getObjectId());
+                        } else {
+                            i.putExtra("groupPos", groupPosition);
+                            i.putExtra("childPos", childPosition);
+                        }
 
                         startActivity(i);
 
@@ -318,14 +326,14 @@ public class MainActivity extends Activity {
 
                             group.getChildren().remove(childPosition);
                             if (group.getChildren().size()==0) {
-                                deleteCat(group.getGroupName());
+                                if (online) deleteCat(group.getGroupName(online));
                                 listTasks.remove(groupPosition);
                             }
                             itemsAdapter.notifyDataSetChanged();
 
-                            child.deleteEventually();
+                            if (online) child.deleteEventually();
+                            else writeItems();
 
-                            //writeItems();
                             return true;
                         } else if (ExpandableListView.getPackedPositionType(id) == ExpandableListView.PACKED_POSITION_TYPE_GROUP) {
 
@@ -334,13 +342,14 @@ public class MainActivity extends Activity {
                             listTasks.remove(groupPosition);
                             itemsAdapter.notifyDataSetChanged();
 
-                            deleteCat(group.getGroupName());
+                            if (online) {
+                                deleteCat(group.getGroupName(online));
 
-                            for (Child child : children) {
-                                child.deleteEventually();
-                            }
+                                for (Child child : children) {
+                                    child.deleteEventually();
+                                }
+                            } else  writeItems();
 
-                            //writeItems();
                             return true;
                         }
 
@@ -372,18 +381,18 @@ public class MainActivity extends Activity {
         EditText etNewItem = (EditText) findViewById(R.id.etNewItem);
         String childName = etNewItem.getText().toString();
         if (!(childName.equals("") || catText.equals(""))) {
-            Child child = new Child(childName, catText);
-            child.setCloudChildName(childName);
-            child.setCloudParentName(catText);
-            child.setCloudCompleted(false);
-            child.setCloudComment(new String());
-            child.setCloudDate(new String());
-            child.setCloudTasks(new ArrayList<String>());
-            child.saveEventually();
+            Child child = new Child();
+            child.setChildName(childName, online);
+            child.setParentName(catText, online);
+            child.setCompleted(false, online);
+            child.setComment(new String(), online);
+            child.setDate(new String(), online);
+            child.setTasks(new ArrayList<String>(), online);
+            if (online) child.saveEventually();
             etNewItem.setText("");
             itemsAdapter.addItem(child, catText);
             itemsAdapter.notifyDataSetChanged();
-            //writeItems();
+            if (!online) writeItems();
         }
     }
 
@@ -392,14 +401,14 @@ public class MainActivity extends Activity {
         catText = catName.getText().toString();
         if (!catText.equals("") && !categories.contains(catText)) {
             Group cat = new Group();
-            cat.setGroupName(catText);
-            cat.saveEventually();
+            cat.setGroupName(catText, online);
+            if (online) cat.saveEventually();
             categories.add(catText);
             catName.setText("");
-            //saveCat();
+            if (!online) writeCat();
             catsAdapter.notifyDataSetChanged();
             buttonCats.setText(catText);
-            //listTasks.add(cat);
+            listTasks.add(cat);
             return true;
         } else return false;
     }
@@ -418,7 +427,6 @@ public class MainActivity extends Activity {
             }
         });
     }
-
     public void deleteTasks(String catName) {
         ParseQuery<Child> childrenQuery = ParseQuery.getQuery(Child.class);
         childrenQuery.whereEqualTo("parentName", catName);
@@ -435,7 +443,55 @@ public class MainActivity extends Activity {
         });
     }
 
-    public void readItems() {
+    public void loadCats(){
+        if (online) loadOnlineCats();
+        else loadOfflineCats();
+    }
+    public void loadOfflineCats(){
+        categories =  new ArrayList<>(Arrays.asList(loadArray("categories", getApplicationContext())));
+    }
+    public boolean saveArray(String[] array, String arrayName, Context mContext) {
+        SharedPreferences prefs = mContext.getSharedPreferences("categories", 0);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.clear();
+        editor.putInt(arrayName +"_size", array.length);
+        for(int i=0;i<array.length;i++)
+            editor.putString(arrayName + "_" + i, array[i]);
+        return editor.commit();
+    }
+    public String[] loadArray(String arrayName, Context mContext) {
+        SharedPreferences prefs = mContext.getSharedPreferences("categories", 0);
+        int size = prefs.getInt(arrayName + "_size", 0);
+        String array[] = new String[size];
+        for(int i=0;i<size;i++)
+            array[i] = prefs.getString(arrayName + "_" + i, null);
+        return array;
+    }
+    public void loadOnlineCats() {
+
+        ParseQuery<Group> groupsQuery = ParseQuery.getQuery(Group.class);
+        groupsQuery.findInBackground(new FindCallback<Group>() {
+            @Override
+            public void done(List<Group> groups, ParseException error) {
+                if (groups != null) {
+                    for (final Group cat : groups) {
+                        final String catName = cat.getGroupName(online);
+                        categories.add(catName);
+                    }
+                }
+            }
+        });
+    }
+    public boolean writeCat(){
+        String[] cat = categories.toArray(new String[categories.size()]);
+        return saveArray(cat, "categories", getApplicationContext());
+    }
+
+    public void loadTasks() {
+        if (online) loadOnlineTasks();
+        else loadOfflineTasks();
+    }
+    public void loadOfflineTasks() {
         File filesDir = getFilesDir();
         File todoFile = new File(filesDir, "todo");
 
@@ -443,7 +499,7 @@ public class MainActivity extends Activity {
         try {
             fis = new FileInputStream(todoFile);
             ObjectInputStream oi = new ObjectInputStream(fis);
-            listTasks = (ListTasks) oi.readObject();
+            listTasks = (ArrayList) oi.readObject();
             /*Toast.makeText(MainActivity.this,
                                 "Items read !",
                                 Toast.LENGTH_LONG).show();*/
@@ -455,9 +511,26 @@ public class MainActivity extends Activity {
         } catch (ClassNotFoundException e) {
             Log.e("InternalStorage", e.getMessage());
         }
-        if (listTasks==null) listTasks = new ListTasks();
+        if (listTasks==null) listTasks = new ArrayList<>();
     }
+    public void loadOnlineTasks() {
 
+        ParseQuery<Child> childrenQuery = ParseQuery.getQuery(Child.class);
+        childrenQuery.findInBackground(new FindCallback<Child>() {
+            public void done(List<Child> children, ParseException e) {
+                if (e == null) {
+                    if (children.size() > 0) {
+                        for (Child child : children) {
+                            itemsAdapter.addItem(child, child.getParentName(online));
+                            itemsAdapter.notifyDataSetChanged();
+                        }
+                    }
+                } else {
+                    Log.d("score", "Error: " + e.getMessage());
+                }
+            }
+        });
+    }
     public void writeItems() {
 
         File filesDir = getFilesDir();
@@ -479,69 +552,6 @@ public class MainActivity extends Activity {
 
     }
 
-    public boolean saveCat(){
-        String[] cat = categories.toArray(new String[categories.size()]);
-        return saveArray(cat, "categories", getApplicationContext());
-    }
-
-    public void loadCat(){
-        categories =  new ArrayList<>(Arrays.asList(loadArray("categories", getApplicationContext())));
-    }
-
-    public boolean saveArray(String[] array, String arrayName, Context mContext) {
-        SharedPreferences prefs = mContext.getSharedPreferences("categories", 0);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.clear();
-        editor.putInt(arrayName +"_size", array.length);
-        for(int i=0;i<array.length;i++)
-            editor.putString(arrayName + "_" + i, array[i]);
-        return editor.commit();
-    }
-
-    public String[] loadArray(String arrayName, Context mContext) {
-        SharedPreferences prefs = mContext.getSharedPreferences("categories", 0);
-        int size = prefs.getInt(arrayName + "_size", 0);
-        String array[] = new String[size];
-        for(int i=0;i<size;i++)
-            array[i] = prefs.getString(arrayName + "_" + i, null);
-        return array;
-    }
-
-    public void loadCats() {
-
-        ParseQuery<Group> groupsQuery = ParseQuery.getQuery(Group.class);
-        groupsQuery.findInBackground(new FindCallback<Group>() {
-            @Override
-            public void done(List<Group> groups, ParseException error) {
-                if (groups != null) {
-                    for (final Group cat : groups) {
-                        final String catName = cat.getGroupName();
-                        categories.add(catName);
-                    }
-                }
-            }
-        });
-    }
-
-    public void loadTasks() {
-
-        ParseQuery<Child> childrenQuery = ParseQuery.getQuery(Child.class);
-        childrenQuery.findInBackground(new FindCallback<Child>() {
-            public void done(List<Child> children, ParseException e) {
-                if (e == null) {
-                    if (children.size() > 0) {
-                        for (Child child : children) {
-                            itemsAdapter.addItem(child, child.getCloudParentName());
-                            itemsAdapter.notifyDataSetChanged();
-                        }
-                    }
-                } else {
-                    Log.d("score", "Error: " + e.getMessage());
-                }
-            }
-        });
-    }
-
     public void signUp(String userName, String passWord, String email) {
         ParseUser user = new ParseUser();
         user.setUsername(userName);
@@ -559,7 +569,6 @@ public class MainActivity extends Activity {
             }
         });
     }
-
     public void logIn(String userName, String passWord){
         ParseUser.logInInBackground(userName, passWord, new LogInCallback() {
             public void done(ParseUser user, ParseException e) {
@@ -571,5 +580,6 @@ public class MainActivity extends Activity {
             }
         });
     }
+
 }
 

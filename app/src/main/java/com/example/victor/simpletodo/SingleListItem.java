@@ -16,7 +16,6 @@ import android.widget.Toast;
 
 import com.parse.GetCallback;
 import com.parse.ParseException;
-import com.parse.ParseObject;
 import com.parse.ParseQuery;
 
 import java.io.File;
@@ -41,9 +40,10 @@ public class SingleListItem extends Activity {
     private EditText etDate;
     private DatePickerDialog dateDialog;
     private SimpleDateFormat dateFormatter;
-    private ArrayList<String> subTasks;
-    //public Child task = new Child();
+    private List<String> subTasks;
     private ArrayList<Group> listTasks;
+    private Boolean online;
+    private Child task;
 
 
     @Override
@@ -51,103 +51,69 @@ public class SingleListItem extends Activity {
         super.onCreate(savedInstanceState);
         this.setContentView(R.layout.single_list_item_view);
 
-        //readItems();
+        online = getIntent().getBooleanExtra("online", false);
 
-        //loadTask();
-
-        //Log.d("Category " + task.getParentName(), "; Name " + task.getChildName());
-
-        ParseQuery<Child> query = ParseQuery.getQuery(Child.class);
-        query.getInBackground(getIntent().getStringExtra("objectId"), new GetCallback<Child>() {
-            public void done(Child child, ParseException e) {
-                if (e == null) {
-
-                    setupViews(child);
-                    setupItemsAdapter(child);
-                    setupListViewListener();
-                    setupDate();
-
-
-
-                } else {
-
-                    Toast.makeText(SingleListItem.this,
-                            "ERROR PARSE",
-                            Toast.LENGTH_LONG).show();
+        if (online) {
+            ParseQuery<Child> query = ParseQuery.getQuery(Child.class);
+            query.getInBackground(getIntent().getStringExtra("objectId"), new GetCallback<Child>() {
+                public void done(Child child, ParseException e) {
+                    if (e == null) {
+                        setupViews(child);
+                        setupItemsAdapter(child);
+                        setupListViewListener();
+                        setupDate();
+                    } else {
+                        Toast.makeText(SingleListItem.this,
+                                "ERROR PARSE",
+                                Toast.LENGTH_LONG).show();
+                    }
                 }
-            }
-        });
-
-        //setupViews();
-        //setupItemsAdapter();
-        //setupListViewListener();
-        //setupDate();
-
-
-
+            });
+        } else {
+            loadOfflineTasks();
+            loadCurrentTask();
+            setupViews(task);
+            setupItemsAdapter(task);
+            setupListViewListener();
+            setupDate();
+        }
     }
 
-    public void loadTask() {
-        ParseQuery<Child> query = ParseQuery.getQuery(Child.class);
-        query.getInBackground(getIntent().getStringExtra("objectId"), new GetCallback<Child>() {
-            public void done(Child child, ParseException e) {
-                if (e == null) {
-
-                    /*task.setChildName(child.getCloudChildName());
-                    task.setParentName(child.getCloudParentName());
-                    task.setComment(child.getCloudComment());
-                    task.setDate(child.getCloudDate());
-                    task.setCompleted(child.isCloudCompleted());
-                    task.setTasks(child.getCloudTasks());
-
-                    Log.d("Category " + task.getParentName(), "; Name " + task.getChildName());*/
-
-
-                } else {
-
-                    Toast.makeText(SingleListItem.this,
-                            "ERROR PARSE",
-                            Toast.LENGTH_LONG).show();
-                }
-            }
-        });
-    }
-    public void setupViews(Child task) {
-
+    public void loadCurrentTask() {
         //task = getIntent().getParcelableExtra("child");
-        //int childPos = getIntent().getIntExtra("childPos", 0);
-        //int groupPos = getIntent().getIntExtra("groupPos", 0);
+        int childPos = getIntent().getIntExtra("childPos", 0);
+        int groupPos = getIntent().getIntExtra("groupPos", 0);
         //listTasks = getIntent().getParcelableArrayListExtra("listTasks");
 
         //String groupName = listTasks.get(groupPos).getGroupName();
-        //task = listTasks.get(groupPos).getChildren().get(childPos);
+        task = listTasks.get(groupPos).getChildren().get(childPos);
+    }
+
+    public void setupViews(Child task) {
 
         tvLabel = (TextView) findViewById(R.id.label);
         etComment = (EditText) findViewById(R.id.comment);
         etDate = (EditText) findViewById(R.id.etDate);
 
-        tvLabel.setText(task.getCloudChildName() + " (" + task.getCloudParentName() + ")");
-        etComment.setText(task.getCloudComment());
+        tvLabel.setText(task.getChildName(online) + " (" + task.getParentName(online) + ")");
+        etComment.setText(task.getComment(online));
         etDate.setInputType(InputType.TYPE_NULL);
-        etDate.setText(task.getCloudDate());
+        etDate.setText(task.getDate(online));
         dateFormatter = new SimpleDateFormat("dd-MM-yyyy", Locale.US);
-
 
     }
 
     public void setupItemsAdapter(Child task){
 
-        subTasks = task.getCloudTasks();
+        //subTasks = task.getTasks(online);
 
-        itemsAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, new ArrayList<String>());
+
+        itemsAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, task.getTasks(online));
 
         lvItems = (ListView) findViewById(R.id.subItems);
         lvItems.setAdapter(itemsAdapter);
 
-        Log.d("Number of subtasks", Integer.toString(subTasks.size()));
-        for (String name : subTasks){Log.d("subclass", name);}
-
-        itemsAdapter.addAll(subTasks);
+        //itemsAdapter.addAll(subTasks);
         itemsAdapter.notifyDataSetChanged();
     }
 
@@ -156,16 +122,16 @@ public class SingleListItem extends Activity {
             @Override
             public boolean onItemLongClick(AdapterView<?> adapter,
                                            View item, final int pos, long id) {
-
+            if (online) {
                 ParseQuery<Child> query = ParseQuery.getQuery(Child.class);
                 query.getInBackground(getIntent().getStringExtra("objectId"), new GetCallback<Child>() {
                     public void done(Child task, ParseException e) {
                         if (e == null) {
-                            String subTaskName = task.getCloudTasks().get(pos);
+                            String subTaskName = task.getTasks(online).get(pos);
                             itemsAdapter.remove(subTaskName);
                             itemsAdapter.notifyDataSetChanged();
 
-                            List<String> subTask = new ArrayList<String>();
+                            List<String> subTask = new ArrayList<>();
                             subTask.add(subTaskName);
                             task.removeAll("subTasks", subTask);
                             task.saveEventually();
@@ -179,7 +145,10 @@ public class SingleListItem extends Activity {
                         }
                     }
                 });
-
+            } else {
+                task.getTasks(online).remove(pos);
+                itemsAdapter.notifyDataSetChanged();
+            }
                 return true;
             }
         });
@@ -191,7 +160,7 @@ public class SingleListItem extends Activity {
         dateDialog = new DatePickerDialog(this, new DatePickerDialog.OnDateSetListener() {
 
             public void onDateSet(DatePicker view, final int year, final int monthOfYear, final int dayOfMonth) {
-
+            if (online) {
                 ParseQuery<Child> query = ParseQuery.getQuery(Child.class);
                 query.getInBackground(getIntent().getStringExtra("objectId"), new GetCallback<Child>() {
                     public void done(Child task, ParseException e) {
@@ -200,7 +169,7 @@ public class SingleListItem extends Activity {
                             Calendar newDate = Calendar.getInstance();
                             newDate.set(year, monthOfYear, dayOfMonth);
                             etDate.setText(dateFormatter.format(newDate.getTime()));
-                            task.setCloudDate(dateFormatter.format(newDate.getTime()));
+                            task.setDate(dateFormatter.format(newDate.getTime()), online);
                             task.saveEventually();
 
                         } else {
@@ -211,9 +180,15 @@ public class SingleListItem extends Activity {
                         }
                     }
                 });
+            } else {
+                Calendar newDate = Calendar.getInstance();
+                newDate.set(year, monthOfYear, dayOfMonth);
+                etDate.setText(dateFormatter.format(newDate.getTime()));
+                task.setDate(dateFormatter.format(newDate.getTime()), online);
 
+                writeItems();
+            }
 
-                //writeItems();
             }
 
         },newCalendar.get(Calendar.YEAR), newCalendar.get(Calendar.MONTH), newCalendar.get(Calendar.DAY_OF_MONTH));
@@ -227,62 +202,77 @@ public class SingleListItem extends Activity {
     @Override
     public void onBackPressed(){
         saveComment();
-        //writeItems();
+        if (!online) writeItems();
         super.onBackPressed();
     }
 
     public void saveComment(){
+        if (online) {
+            ParseQuery<Child> query = ParseQuery.getQuery(Child.class);
+            query.getInBackground(getIntent().getStringExtra("objectId"), new GetCallback<Child>() {
+                public void done(Child task, ParseException e) {
+                    if (e == null) {
 
-        ParseQuery<Child> query = ParseQuery.getQuery(Child.class);
-        query.getInBackground(getIntent().getStringExtra("objectId"), new GetCallback<Child>() {
-            public void done(Child task, ParseException e) {
-                if (e == null) {
+                        task.setComment(etComment.getText().toString(), online);
+                        task.saveEventually();
 
-                    task.setCloudComment(etComment.getText().toString());
-                    task.saveEventually();
+                    } else {
 
-                } else {
-
-                    Toast.makeText(SingleListItem.this,
-                            "ERROR PARSE",
-                            Toast.LENGTH_LONG).show();
+                        Toast.makeText(SingleListItem.this,
+                                "ERROR PARSE",
+                                Toast.LENGTH_LONG).show();
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            task.setComment(etComment.getText().toString(), online);
+        }
     }
 
     public void onAddSubItem(View v) {
-        ParseQuery<Child> query = ParseQuery.getQuery(Child.class);
-        query.getInBackground(getIntent().getStringExtra("objectId"), new GetCallback<Child>() {
-            public void done(Child task, ParseException e) {
-                if (e == null) {
+        if (online) {
+            ParseQuery<Child> query = ParseQuery.getQuery(Child.class);
+            query.getInBackground(getIntent().getStringExtra("objectId"), new GetCallback<Child>() {
+                public void done(Child task, ParseException e) {
+                    if (e == null) {
 
-                    EditText etNewSubItem = (EditText) findViewById(R.id.etNewSubItem);
-                    String itemText = etNewSubItem.getText().toString();
-                    if (!itemText.equals("")) {
+                        EditText etNewSubItem = (EditText) findViewById(R.id.etNewSubItem);
+                        String itemText = etNewSubItem.getText().toString();
+                        if (!itemText.equals("")) {
 
-                        task.addUnique("subTasks", itemText);
-                        task.saveEventually();
-                        itemsAdapter.clear();
-                        itemsAdapter.addAll(task.getCloudTasks());
-                        itemsAdapter.notifyDataSetChanged();
-                        etNewSubItem.setText("");
-                        //writeItems();
+                            task.addUnique("subTasks", itemText);
+                            task.saveEventually();
+                            itemsAdapter.clear();
+                            itemsAdapter.addAll(task.getTasks(online));
+                            itemsAdapter.notifyDataSetChanged();
+                            etNewSubItem.setText("");
+
+                        }
+
+                    } else {
+
+                        Toast.makeText(SingleListItem.this,
+                                "ERROR PARSE",
+                                Toast.LENGTH_LONG).show();
                     }
-
-                } else {
-
-                    Toast.makeText(SingleListItem.this,
-                            "ERROR PARSE",
-                            Toast.LENGTH_LONG).show();
                 }
+            });
+        } else {
+            EditText etNewSubItem = (EditText) findViewById(R.id.etNewSubItem);
+            String itemText = etNewSubItem.getText().toString();
+            if (!itemText.equals("")) {
+                task.getTasks(online).add(itemText);
+                itemsAdapter.notifyDataSetChanged();
+                etNewSubItem.setText("");
+                writeItems();
             }
-        });
+
+        }
 
 
     }
 
-    public void readItems() {
+    public void loadOfflineTasks() {
         File filesDir = getFilesDir();
         File todoFile = new File(filesDir, "todo");
 
@@ -290,7 +280,7 @@ public class SingleListItem extends Activity {
         try {
             fis = new FileInputStream(todoFile);
             ObjectInputStream oi = new ObjectInputStream(fis);
-            listTasks = (ListTasks) oi.readObject();
+            listTasks = (ArrayList) oi.readObject();
             /*Toast.makeText(SingleListItem.this,
                     "Items read !",
                     Toast.LENGTH_LONG).show();*/
@@ -302,7 +292,7 @@ public class SingleListItem extends Activity {
         } catch (ClassNotFoundException e) {
             Log.e("InternalStorage", e.getMessage());
         }
-        if (listTasks==null) listTasks = new ListTasks();
+        if (listTasks==null) listTasks = new ArrayList<>();
     }
 
     public void writeItems() {

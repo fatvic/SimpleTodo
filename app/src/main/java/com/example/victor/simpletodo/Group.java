@@ -13,53 +13,41 @@ import java.util.ArrayList;
 @ParseClassName("Categories")
 public class Group extends ParseObject implements Serializable, Parcelable {
 
-    static private int ID=0;
     static final long serialVersionUID =-1903057014897953692L;
-    private int groupId;
     private String groupName;
     private ArrayList<Child> children;
 
     public Group(){
-        this.groupId = ID++;
         this.groupName = new String();
         this.children = new ArrayList<>();
     }
 
     public Group(String groupName) {
         super();
-        this.groupId = ID++;
-        setGroupName(groupName);
+        this.groupName = groupName;
         this.children = new ArrayList<>();
     }
 
     public Group(String groupName, ArrayList<Child >children) {
         super();
-        this.groupId = ID++;
-        setGroupName(groupName);
+        this.groupName = groupName;
         this.children = children;
     }
 
-    public int getGroupId() {
-        return groupId;
+    public String getGroupName(Boolean online) {
+        if (online) return getString("groupName");
+        else return groupName;
     }
-
-    public String getGroupName() {
-        return getString("groupName");
-        //return groupName;
-    }
-
-    public void setGroupName(String groupName) {
-        put("groupName", groupName);
-        this.groupName = groupName;
+    public void setGroupName(String groupName, Boolean online) {
+        if (online) put("groupName", groupName);
+        else this.groupName = groupName;
     }
 
     public ArrayList<Child> getChildren() {
         return children;
     }
-
     public void setChildren(ArrayList<Child> children) {
         this.children = children;
-        put("nbChildren", children.size());
     }
 
     public void addChild(Child child){
@@ -79,13 +67,11 @@ public class Group extends ParseObject implements Serializable, Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int i) {
-        dest.writeInt(groupId);
         dest.writeString(groupName);
         dest.writeTypedList(children);
     }
 
     public void readFromParcel(Parcel in){
-        this.groupId = in.readInt();
         this.groupName = in.readString();
         in.readTypedList(children, Child.CREATOR);
     }

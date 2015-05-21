@@ -24,12 +24,12 @@ public class Child extends ParseObject implements Serializable, Parcelable {
 
     public Child() {
         super();
-        /*this.parentName = new String();
+        this.parentName = new String();
         this.childName = new String();
         this.comment = new String();
         this.tasks = new ArrayList<>();
         this.date = new String();
-        this.completed = false;*/
+        this.completed = false;
     }
 
     public Child(String childName, String parentName) {
@@ -42,91 +42,59 @@ public class Child extends ParseObject implements Serializable, Parcelable {
         this.completed = false;
     }
 
-    public String getCloudChildName() {
-        return getString("childName");
+    public String getChildName(Boolean online) {
+        if (online) return getString("childName");
+        else return childName;
     }
-    public void setCloudChildName(String childName) {
-        put("childName", childName);
-        this.childName = childName;
+    public void setChildName(String childName, Boolean online) {
+        if (online) put("childName", childName);
+        else this.childName = childName;
     }
-    public String getChildName() {
-        return childName;
+    public String getParentName(Boolean online) {
+        if (online) return getString("parentName");
+        else return parentName;
     }
-    public void setChildName(String childName) {
-        this.childName = childName;
+    public void setParentName(String parentName, Boolean online) {
+        if (online) put("parentName", parentName);
+        else this.parentName = parentName;
     }
-
-    public String getCloudParentName() {
-        return getString("parentName");
+    public String getComment(Boolean online) {
+        if (online) return getString("comment");
+        else return comment;
     }
-    public void setCloudParentName(String parentName) {
-        put("parentName", parentName);
+    public void setComment(String comment, Boolean online) {
+        if (online) put("comment", comment);
+        else this.comment = comment;
     }
-    public String getParentName() {
-        return parentName;
+    public List<String> getTasks(Boolean online) {
+        if (online) return getList("subTasks");
+        else return tasks;
     }
-    public void setParentName(String parentName) {
-        this.parentName = parentName;
+    public void setTasks(List<String> tasks, Boolean online) {
+        if (online) put("subTasks", tasks);
+        else this.tasks = tasks;
     }
-
-    public String getCloudComment() {
-        return getString("comment");
+    public void addTask(String task, Boolean online) {
+        if (online) addUnique("subTasks", task);
+        else tasks.add(task);
     }
-    public void setCloudComment(String comment) {
-        put("comment", comment);
+    public String getDate(Boolean online) {
+        if (online) return getString("date");
+        else return date;
     }
-    public String getComment() {
-        return comment;
+    public void setDate(String date, Boolean online) {
+        if (online) put("date", date);
+        else this.date = date;
     }
-    public void setComment(String comment) {
-        this.comment = comment;
+    public boolean isCompleted(Boolean online) {
+        if (online) return getBoolean("completed");
+        else return completed;
     }
-
-    public ArrayList<String> getCloudTasks() {
-        if (getList("subTasks")==null) { return new ArrayList<>(); }
-        else { return (ArrayList)getList("subTasks"); }
-    }
-    public void setCloudTasks(List<String> tasks) {
-        addAll("subTasks", tasks);
-    }
-    public void addCloudTask(String task) {
-        add("subTasks", task);
-    }
-    public List<String> getTasks() {
-        return tasks;
-    }
-    public void setTasks(ArrayList<String> tasks) {
-        this.tasks = tasks;
-    }
-    public void addTask(String task) {
-        tasks.add(task);
+    public void setCompleted(Boolean completed, Boolean online) {
+        if (online) put("completed", completed);
+        else this.completed = completed;
     }
 
-    public String getCloudDate() {
-        return getString("date");
-    }
-    public void setCloudDate(String date) {
-        put("date", date);
-    }
-    public String getDate() {
-        return date;
-    }
-    public void setDate(String date) {
-        this.date = date;
-    }
-
-    public boolean isCloudCompleted(){
-        return getBoolean("completed");
-    }
-    public void setCloudCompleted(boolean complete){
-        put("completed", complete);
-    }
-    public boolean isCompleted(){
-        return completed;
-    }
-    public void setCompleted(boolean complete){
-        this.completed = complete;
-    }
 
     public Child(Parcel in){
         this();

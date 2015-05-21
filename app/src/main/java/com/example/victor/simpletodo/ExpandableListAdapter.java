@@ -15,10 +15,12 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
     LayoutInflater inflater;
 
     private ArrayList<Group> groups;
+    private boolean online;
 
-    public ExpandableListAdapter(Context context,ArrayList<Group> groups) {
+    public ExpandableListAdapter(Context context, ArrayList<Group> groups, Boolean online) {
         super();
         this.groups = groups;
+        this.online = online;
         inflater= (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
 
@@ -27,7 +29,7 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
         boolean found = false;
         int i;
         for (i = 0; !found && i < size; i++){
-            if (groups.get(i).getGroupName().equals(groupName)) found = true;
+            if (groups.get(i).getGroupName(false).equals(groupName)) found = true;
         }
         if (found) {
             groups.get(i - 1).addChild(child);
@@ -44,7 +46,7 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
         boolean found = false;
         int i;
         for (i = 0; !found && i < size; i++){
-            if (groups.get(i).getGroupName().equals(parentName)) found = true;
+            if (groups.get(i).getGroupName(false).equals(parentName)) found = true;
         }
         if (found) {
             return false;
@@ -61,7 +63,7 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
         boolean found = false;
         int i;
         for (i = 0; !found && i < size; i++){
-            if (groups.get(i).getGroupName().equals(group.getGroupName())) found = true;
+            if (groups.get(i).getGroupName(false).equals(group.getGroupName(false))) found = true;
         }
         if (found) {
             return false;
@@ -95,9 +97,9 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
             convertView=inflater.inflate(R.layout.child_view, null);
         }
         childName=(TextView) convertView.findViewById(R.id.textViewChildName);
-        childName.setText(child.getCloudChildName());
+        childName.setText(child.getChildName(online));
 
-        if(child.isCompleted()){
+        if(child.isCompleted(online)){
             childName.setPaintFlags(childName.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
         } else{
             childName.setPaintFlags(childName.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
@@ -127,7 +129,7 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
             convertView=inflater.inflate(R.layout.group_view, null);
         }
         groupName=(TextView) convertView.findViewById(R.id.textViewGroupName);
-        groupName.setText(group.getGroupName());
+        groupName.setText(group.getGroupName(false));
         return convertView;
     }
 
