@@ -21,6 +21,9 @@
         </activity>
 
         <activity
+            android:name=".TodoList"
+            android:label="TodoList"/>
+        <activity
             android:name=".SingleListItem"
             android:label="Task Selected"/>
 

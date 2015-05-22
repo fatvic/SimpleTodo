@@ -1,6 +1,7 @@
 package com.example.victor.simpletodo;
 
 import android.content.Context;
+import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,14 +10,17 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
+
 public class ExpandableListAdapter extends BaseExpandableListAdapter {
     LayoutInflater inflater;
 
     private ArrayList<Group> groups;
+    private boolean online;
 
-    public ExpandableListAdapter(Context context,ArrayList<Group> groups) {
+    public ExpandableListAdapter(Context context, ArrayList<Group> groups, Boolean online) {
         super();
         this.groups = groups;
+        this.online = online;
         inflater= (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
 
@@ -25,7 +29,7 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
         boolean found = false;
         int i;
         for (i = 0; !found && i < size; i++){
-            if (groups.get(i).getGroupName().equals(groupName)) found = true;
+            if (groups.get(i).getGroupName(false).equals(groupName)) found = true;
         }
         if (found) {
             groups.get(i - 1).addChild(child);
@@ -42,13 +46,29 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
         boolean found = false;
         int i;
         for (i = 0; !found && i < size; i++){
-            if (groups.get(i).getGroupName().equals(parentName)) found = true;
+            if (groups.get(i).getGroupName(false).equals(parentName)) found = true;
         }
         if (found) {
             return false;
         }
         else {
             Group group = new Group(parentName);
+            groups.add(group);
+            return true;
+        }
+    }
+
+    public boolean addGroup (Group group) {
+        int size = groups.size();
+        boolean found = false;
+        int i;
+        for (i = 0; !found && i < size; i++){
+            if (groups.get(i).getGroupName(false).equals(group.getGroupName(false))) found = true;
+        }
+        if (found) {
+            return false;
+        }
+        else {
             groups.add(group);
             return true;
         }
@@ -77,8 +97,16 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
             convertView=inflater.inflate(R.layout.child_view, null);
         }
         childName=(TextView) convertView.findViewById(R.id.textViewChildName);
-        childName.setText(child.getChildName());
+        childName.setText(child.getChildName(online));
+
+        if(child.isCompleted(online)){
+            childName.setPaintFlags(childName.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+        } else{
+            childName.setPaintFlags(childName.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
+        }
+
         return convertView;
+
     }
 
     public Group getGroup(int groupPosition) {
@@ -101,7 +129,7 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
             convertView=inflater.inflate(R.layout.group_view, null);
         }
         groupName=(TextView) convertView.findViewById(R.id.textViewGroupName);
-        groupName.setText(group.getGroupName());
+        groupName.setText(group.getGroupName(false));
         return convertView;
     }
 
@@ -112,4 +140,5 @@ public class ExpandableListAdapter extends BaseExpandableListAdapter {
     public boolean hasStableIds() {
         return true;
     }
+
 }
